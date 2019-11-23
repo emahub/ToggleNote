@@ -11,6 +11,7 @@ MIDI Processor AU
 using namespace std;
 
 static const int kMIDIPacketListSize = 2048;
+static bool toggleStatus = false;
 
 AUDIOCOMPONENT_ENTRY(AUMIDIEffectFactory, ToggleNote)
 
@@ -151,7 +152,39 @@ OSStatus ToggleNote::Render (AudioUnitRenderActionFlags &ioActionFlags, const Au
     {
         //----------------------------------------------------------------------//
         // This is where the midi packets get processed
-        //
+        
+        int _status = packet->data[0] & 0b11110000;
+        int _ch = packet->data[0] & 0b1111;
+         #ifdef DEBUG
+            DEBUGLOG_B("status: " << _status <<
+                       ", ch: " << _ch <<
+                       ", packet->data[0]: " << (int)packet->data[0] <<
+                       ", packet->data[1]: " << (int)packet->data[1] <<
+                       ", packet->data[2]: " << (int)packet->data[2] << endl);
+        #endif
+        
+        if(_status == kNoteOn && _ch == 0){
+            if(packet->data[1] == 60 && packet->data[2] > 0){
+                if(!toggleStatus){
+                    DEBUGLOG_B("start" << endl);
+                    packet->data[1] = 48;
+                    packet->data[2] = 100;
+                    toggleStatus = true;
+                } else {
+                    DEBUGLOG_B("ignore" << endl);
+                    packet->data[0] = 0;
+                    packet->data[1] = 0;
+                    packet->data[2] = 0;
+                }
+                    
+            }else if(packet->data[1] == 61 && packet->data[2] > 0){
+                DEBUGLOG_B("stop" << endl);
+                packet->data[1] = 48;
+                packet->data[2] = 0;
+                toggleStatus = false;
+            }
+        }
+        
         //----------------------------------------------------------------------//
         
         if (packetListIterator == NULL) return noErr;

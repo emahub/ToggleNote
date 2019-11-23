@@ -14,6 +14,9 @@ MIDI Processor AU
 #include "AUMIDIEffectBase.h"
 #include "LockFreeFIFO.h"
 
+#define kNoteOn 0x90
+#define kNoteOff 0x80
+
 #ifdef DEBUG
 #include <fstream>
 #include <ctime>
