@@ -39,6 +39,10 @@ public:
 
 	virtual OSStatus GetProperty(AudioUnitPropertyID inID, AudioUnitScope inScope, AudioUnitElement inElement, void* outData);
   
+    virtual    OSStatus            GetParameterInfo(    AudioUnitScope            inScope,
+                                                    AudioUnitParameterID    inParameterID,
+                                                    AudioUnitParameterInfo    &outParameterInfo);
+    
     virtual OSStatus SetProperty(	AudioUnitPropertyID inID, AudioUnitScope inScope, AudioUnitElement inElement, const void* inData, UInt32 inDataSize);
 
  	virtual	bool SupportsTail() { return false; }

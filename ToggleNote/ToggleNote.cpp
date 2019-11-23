@@ -24,6 +24,12 @@ enum {
     kNumberOfParameters = 5
 };
 
+static const CFStringRef kParamName_Ch = CFSTR("Ch: ");
+static const CFStringRef kParamName_CC = CFSTR("CC: ");
+static const CFStringRef kParamName_NoteMin = CFSTR("Note Min: ");
+static const CFStringRef kParamName_NoteMax = CFSTR("Note Max: ");
+static const CFStringRef kParamName_Velocity = CFSTR("Velocity: ");
+
 #pragma mark ToggleNote
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -55,6 +61,65 @@ ToggleNote::ToggleNote(AudioUnit component) : AUMIDIEffectBase(component), mOutp
     Globals()->SetParameter(kParameter_Velocity, 127);
     
     mMIDIOutCB.midiOutputCallback = nullptr;
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//    ToggleNote::SetProperty
+//
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+OSStatus ToggleNote::GetParameterInfo(
+                                        AudioUnitScope inScope, AudioUnitParameterID inParameterID,
+                                        AudioUnitParameterInfo &outParameterInfo) {
+    
+#ifdef DEBUG
+    DEBUGLOG_B("GetParameterInfo - inScope: " << inScope << endl);
+    DEBUGLOG_B("GetParameterInfo - inParameterID: " << inParameterID << endl);
+#endif
+    
+    if (inScope != kAudioUnitScope_Global) return kAudioUnitErr_InvalidScope;
+    
+    outParameterInfo.flags += kAudioUnitParameterFlag_IsWritable;
+    outParameterInfo.flags += kAudioUnitParameterFlag_IsReadable;
+    
+    switch (inParameterID) {
+        case kParameter_Ch:
+            AUBase::FillInParameterName(outParameterInfo, kParamName_Ch, false);
+            outParameterInfo.unit = kAudioUnitParameterUnit_Indexed;
+            outParameterInfo.minValue = 1;
+            outParameterInfo.maxValue = 16;
+            break;
+        case kParameter_CC:
+            AUBase::FillInParameterName(outParameterInfo, kParamName_CC,
+                                        false);
+            outParameterInfo.unit = kAudioUnitParameterUnit_Indexed;
+            outParameterInfo.minValue = 1;
+            outParameterInfo.maxValue = 127;
+            break;
+        case kParameter_NoteMin:
+            AUBase::FillInParameterName(outParameterInfo, kParamName_NoteMin,
+                                        false);
+            outParameterInfo.unit = kAudioUnitParameterUnit_MIDINoteNumber;
+            outParameterInfo.minValue = 1;
+            outParameterInfo.maxValue = 127;
+            break;
+        case kParameter_NoteMax:
+            AUBase::FillInParameterName(outParameterInfo, kParamName_NoteMax,
+                                        false);
+            outParameterInfo.unit = kAudioUnitParameterUnit_MIDINoteNumber;
+            outParameterInfo.minValue = 1;
+            outParameterInfo.maxValue = 127;
+            break;
+        case kParameter_Velocity:
+            AUBase::FillInParameterName(outParameterInfo, kParamName_Velocity,
+                                        false);
+            outParameterInfo.unit = kAudioUnitParameterUnit_Indexed;
+            outParameterInfo.minValue = 1;
+            outParameterInfo.maxValue = 127;
+            break;
+        default:
+            return kAudioUnitErr_InvalidParameter;
+    }
+
+    return noErr;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
