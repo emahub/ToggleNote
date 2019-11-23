@@ -15,6 +15,15 @@ static bool toggleStatus = false;
 
 AUDIOCOMPONENT_ENTRY(AUMIDIEffectFactory, ToggleNote)
 
+enum {
+    kParameter_Ch = 0,
+    kParameter_CC = 1,
+    kParameter_NoteMin = 2,
+    kParameter_NoteMax = 3,
+    kParameter_Velocity = 4,
+    kNumberOfParameters = 5
+};
+
 #pragma mark ToggleNote
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -37,6 +46,13 @@ ToggleNote::ToggleNote(AudioUnit component) : AUMIDIEffectBase(component), mOutp
     #endif
 
 	CreateElements();
+    
+    Globals()->UseIndexedParameters(kNumberOfParameters);
+    Globals()->SetParameter(kParameter_Ch, 1);
+    Globals()->SetParameter(kParameter_CC, 64);
+    Globals()->SetParameter(kParameter_NoteMin, 60);
+    Globals()->SetParameter(kParameter_NoteMax, 72);
+    Globals()->SetParameter(kParameter_Velocity, 127);
     
     mMIDIOutCB.midiOutputCallback = nullptr;
 }
