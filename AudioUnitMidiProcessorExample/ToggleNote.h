@@ -14,6 +14,16 @@ MIDI Processor AU
 #include "AUMIDIEffectBase.h"
 #include "LockFreeFIFO.h"
 
+#ifdef DEBUG
+#include <fstream>
+#include <ctime>
+#define DEBUGLOG_B(x) \
+if (baseDebugFile.is_open()) baseDebugFile << x
+#else
+#define DEBUGLOG_B(x)
+#endif
+
+using namespace std;
 
 #pragma mark - ToggleNote
 class ToggleNote : public AUMIDIEffectBase
@@ -41,6 +51,10 @@ private:
   
     LockFreeFIFO<MIDIPacket> mOutputPacketFIFO;
   
+protected:
+#ifdef DEBUG
+    ofstream baseDebugFile;
+#endif
 };
 
 #endif

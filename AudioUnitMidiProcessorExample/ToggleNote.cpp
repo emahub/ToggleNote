@@ -8,6 +8,8 @@ MIDI Processor AU
 
 #include "ToggleNote.h"
 
+using namespace std;
+
 static const int kMIDIPacketListSize = 2048;
 
 AUDIOCOMPONENT_ENTRY(AUMIDIEffectFactory, ToggleNote)
@@ -20,6 +22,19 @@ AUDIOCOMPONENT_ENTRY(AUMIDIEffectFactory, ToggleNote)
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ToggleNote::ToggleNote(AudioUnit component) : AUMIDIEffectBase(component), mOutputPacketFIFO(LockFreeFIFO<MIDIPacket>(32))
 {
+    #ifdef DEBUG
+        string bPath, bFullFileName;
+        bPath = getenv("HOME");
+        if (!bPath.empty()) {
+            bFullFileName = bPath + "/Desktop/" + "Debug.log";
+        } else {
+            bFullFileName = "Debug.log";
+        }
+        
+        baseDebugFile.open(bFullFileName.c_str());
+        DEBUGLOG_B("Plug-in constructor invoked with parameters:" << endl);
+    #endif
+
 	CreateElements();
     
     mMIDIOutCB.midiOutputCallback = nullptr;
