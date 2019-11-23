@@ -11,24 +11,21 @@ MIDI Processor AU
 using namespace std;
 
 static const int kMIDIPacketListSize = 2048;
-static bool toggleStatus = false;
 
 AUDIOCOMPONENT_ENTRY(AUMIDIEffectFactory, ToggleNote)
 
 enum {
     kParameter_Ch = 0,
-    kParameter_CC = 1,
-    kParameter_NoteMin = 2,
-    kParameter_NoteMax = 3,
-    kParameter_Velocity = 4,
-    kNumberOfParameters = 5
+    kParameter_ToggleNoteOn = 1,
+    kParameter_ToggleNoteOff = 2,
+    kParameter_OutputNote = 3,
+    kNumberOfParameters = 4
 };
 
 static const CFStringRef kParamName_Ch = CFSTR("Ch: ");
-static const CFStringRef kParamName_CC = CFSTR("CC: ");
-static const CFStringRef kParamName_NoteMin = CFSTR("Note Min: ");
-static const CFStringRef kParamName_NoteMax = CFSTR("Note Max: ");
-static const CFStringRef kParamName_Velocity = CFSTR("Velocity: ");
+static const CFStringRef kParamName_ToggleNoteOn = CFSTR("Toggle NoteOn Number: ");
+static const CFStringRef kParamName_ToggleNoteOff  = CFSTR("Toggle NoteOff Number: ");
+static const CFStringRef kParamName_OutputNote = CFSTR("Output Note Number: ");
 
 #pragma mark ToggleNote
 
@@ -55,10 +52,9 @@ ToggleNote::ToggleNote(AudioUnit component) : AUMIDIEffectBase(component), mOutp
     
     Globals()->UseIndexedParameters(kNumberOfParameters);
     Globals()->SetParameter(kParameter_Ch, 1);
-    Globals()->SetParameter(kParameter_CC, 64);
-    Globals()->SetParameter(kParameter_NoteMin, 60);
-    Globals()->SetParameter(kParameter_NoteMax, 72);
-    Globals()->SetParameter(kParameter_Velocity, 127);
+    Globals()->SetParameter(kParameter_ToggleNoteOn, 60);
+    Globals()->SetParameter(kParameter_ToggleNoteOff, 61);
+    Globals()->SetParameter(kParameter_OutputNote, 48);
     
     mMIDIOutCB.midiOutputCallback = nullptr;
 }
@@ -87,31 +83,24 @@ OSStatus ToggleNote::GetParameterInfo(
             outParameterInfo.minValue = 1;
             outParameterInfo.maxValue = 16;
             break;
-        case kParameter_CC:
-            AUBase::FillInParameterName(outParameterInfo, kParamName_CC,
-                                        false);
-            outParameterInfo.unit = kAudioUnitParameterUnit_Indexed;
-            outParameterInfo.minValue = 1;
-            outParameterInfo.maxValue = 127;
-            break;
-        case kParameter_NoteMin:
-            AUBase::FillInParameterName(outParameterInfo, kParamName_NoteMin,
+        case kParameter_ToggleNoteOn:
+            AUBase::FillInParameterName(outParameterInfo, kParamName_ToggleNoteOn,
                                         false);
             outParameterInfo.unit = kAudioUnitParameterUnit_MIDINoteNumber;
             outParameterInfo.minValue = 1;
             outParameterInfo.maxValue = 127;
             break;
-        case kParameter_NoteMax:
-            AUBase::FillInParameterName(outParameterInfo, kParamName_NoteMax,
+        case kParameter_ToggleNoteOff:
+            AUBase::FillInParameterName(outParameterInfo, kParamName_ToggleNoteOff,
                                         false);
             outParameterInfo.unit = kAudioUnitParameterUnit_MIDINoteNumber;
             outParameterInfo.minValue = 1;
             outParameterInfo.maxValue = 127;
             break;
-        case kParameter_Velocity:
-            AUBase::FillInParameterName(outParameterInfo, kParamName_Velocity,
+        case kParameter_OutputNote:
+            AUBase::FillInParameterName(outParameterInfo, kParamName_OutputNote,
                                         false);
-            outParameterInfo.unit = kAudioUnitParameterUnit_Indexed;
+            outParameterInfo.unit = kAudioUnitParameterUnit_MIDINoteNumber;
             outParameterInfo.minValue = 1;
             outParameterInfo.maxValue = 127;
             break;
@@ -235,8 +224,14 @@ OSStatus ToggleNote::Render (AudioUnitRenderActionFlags &ioActionFlags, const Au
         // This is where the midi packets get processed
         
         int _status = packet->data[0] & 0b11110000;
-        int _ch = packet->data[0] & 0b1111;
-         #ifdef DEBUG
+        int _ch = (packet->data[0] & 0b1111) + 1;
+        
+        int ch = Globals()->GetParameter(kParameter_Ch);
+        int toggleNoteOn = Globals()->GetParameter(kParameter_ToggleNoteOn);
+        int toggleNoteOff = Globals()->GetParameter(kParameter_ToggleNoteOff);
+        int outputNote = Globals()->GetParameter(kParameter_OutputNote);
+
+        #ifdef DEBUG
             DEBUGLOG_B("status: " << _status <<
                        ", ch: " << _ch <<
                        ", packet->data[0]: " << (int)packet->data[0] <<
@@ -244,25 +239,30 @@ OSStatus ToggleNote::Render (AudioUnitRenderActionFlags &ioActionFlags, const Au
                        ", packet->data[2]: " << (int)packet->data[2] << endl);
         #endif
         
-        if(_status == kNoteOn && _ch == 0){
-            if(packet->data[1] == 60 && packet->data[2] > 0){
-                if(!toggleStatus){
-                    DEBUGLOG_B("start" << endl);
-                    packet->data[1] = 48;
-                    packet->data[2] = 100;
-                    toggleStatus = true;
+        if(_ch == ch && _status == kNoteOn){
+            if(packet->data[1] == toggleNoteOn){
+                if(packet->data[2] > 0){
+                        DEBUGLOG_B("start" << endl);
+                        packet->data[1] = outputNote;
+                        packet->data[2] = packet->data[2];
+               } else {
+                        DEBUGLOG_B("ignore start" << endl);
+                        packet->data[0] = 0;
+                        packet->data[1] = 0;
+                        packet->data[2] = 0;
+               }
+                    
+            } else if(packet->data[1] == toggleNoteOff){
+                if(packet->data[2] > 0){
+                    DEBUGLOG_B("stop" << endl);
+                    packet->data[1] = outputNote;
+                    packet->data[2] = 0;
                 } else {
-                    DEBUGLOG_B("ignore" << endl);
+                    DEBUGLOG_B("ignore stop" << endl);
                     packet->data[0] = 0;
                     packet->data[1] = 0;
                     packet->data[2] = 0;
                 }
-                    
-            }else if(packet->data[1] == 61 && packet->data[2] > 0){
-                DEBUGLOG_B("stop" << endl);
-                packet->data[1] = 48;
-                packet->data[2] = 0;
-                toggleStatus = false;
             }
         }
         
